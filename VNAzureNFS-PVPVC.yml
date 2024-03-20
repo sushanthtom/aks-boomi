@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: linux-nfs-uat-pv
+  namespace: boomi
+spec:
+  capacity:
+    storage: 509Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-sc
+  nfs:
+    server: 10.225.0.4
+    path: /export/data                                  
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linux-nfs-uat-pvc
+  namespace: boomi
+spec:
+  storageClassName: nfs-sc
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 509Gi

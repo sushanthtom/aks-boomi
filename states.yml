@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: molecule
+  labels:
+    app: molecule
+spec:
+  selector:
+    matchLabels:
+      app: molecule
+  serviceName: "molecule-service"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: molecule
+    spec:
+      terminationGracePeriodSeconds: 900
+      volumes:
+        - name: nfs-sc
+          persistentVolumeClaim:
+            claimName: linux-nfs-uat-pvc
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - image: cwrtest.azurecr.io/boomi/sushanth:latest 
+        imagePullPolicy: Always
+        name: atom-node
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1024Mi"
+          requests:
+            cpu: "500m"
+            memory: "768Mi"
+        volumeMounts:
+          - name: molecule-storage
+            mountPath: "/mnt/boomi"
+        readinessProbe:
+          periodSeconds: 10
+          initialDelaySeconds: 10
+          httpGet:
+            path: /_admin/readiness
+            port: 9090
+        livenessProbe:
+          periodSeconds: 60
+          httpGet:
+            path: /_admin/liveness
+            port: 9090
+        env:
+        - name: BOOMI_ATOMNAME
+          value: "boomi-molecule-k8"
+        - name: ATOM_LOCALHOSTID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: BOOMI_ACCOUNTID
+          valueFrom:
+            secretKeyRef:
+              name: boomi-secret
+              key: account
+        - name: BOOMI_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: boomi-secret
+              key: username
+        - name: BOOMI_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: boomi-secret
+              key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cwr-ireland-molecule-qa-service
+  namespace: boomi
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: Ireland-AKS-Boomi
+    service.beta.kubernetes.io/do-loadbalancer-protocol: "http"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-path: "/_admin/status"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-port: "9090"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    #service.beta.kubernetes.io/azure-load-balancer-internal-subnet: "Ireland-LB-Subnet"
+  labels:
+    app: cwr-ireland-molecule-qa-service
+spec:
+  selector:
+    app: cwr-ireland-molecule-qa
+  type: LoadBalancer
+  ports:
+  - name: http
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 9093

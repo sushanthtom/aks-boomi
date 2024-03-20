@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: boomi-secret
+  namespace: boomi
+type: Opaque
+stringData:
+  username: sairam.sada@raybiztech.com
+  password: Sairam@143
+  account: raybusinesstechnologiesre-6VT9S4
